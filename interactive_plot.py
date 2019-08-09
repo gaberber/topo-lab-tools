@@ -35,16 +35,18 @@ def plot_colormap_interactive(fig, ax, x, y, z, xlabel=None, ylabel=None, zlabel
         heat_map.set_norm(norm)
         cb.update_normal(heat_map)
         fig.canvas.draw_idle()
-    
+
     slider_min.on_changed(_update)
     slider_max.on_changed(_update)
     slider_gamma.on_changed(_update)
-    
+
     buttons_colorscheme = RadioButtons(ax_colorscheme, \
-                                        ['viridis', 'plasma', 'magma', 'cividis', 'seismic', 'gist_stern'], activecolor='#206ba9')
-    
+                                        ['viridis', 'plasma', 'magma', \
+                                        'cividis', 'seismic', 'gist_stern'],\
+                                         activecolor='#206ba9')
+
     def _colorfunc(label):
         heat_map.set_cmap(buttons_colorscheme.value_selected)
         fig.canvas.draw_idle()
-        
+
     buttons_colorscheme.on_clicked(_colorfunc)
