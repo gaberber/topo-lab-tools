@@ -30,6 +30,13 @@ def batch_guess_2D_dims(inner_axis, outer_axis, data_2d_list, rescale_xy = True)
 
     return new_inner_axis, new_outer_axis, new_dlist, dims
 
+def import_spyview_dat(data_dir, filename):
+    """
+    Returns a np.array in the same shape as the raw .dat file
+    """
+    with open(os.path.join(data_dir, filename)) as f:
+        dat = np.loadtxt(f)
+    return dat
 
 # to add: bias correciton
 
