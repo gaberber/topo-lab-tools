@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def guess_2D_dims(inner_axis, outer_axis, data_2d, rescale_xy = True):
     '''
