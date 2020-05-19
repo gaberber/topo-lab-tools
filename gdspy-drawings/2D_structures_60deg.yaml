@@ -1,0 +1,322 @@
+directory: E:/Documents/patterns
+arrays:
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.02
+        l1: 1
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.02
+        l1: 1.3
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.02
+        l1: 1.6
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.02
+        l1: 2
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.03
+        l1: 1
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.03
+        l1: 1.3
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.03
+        l1: 1.6
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.03
+        l1: 2
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.04
+        l1: 1
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.04
+        l1: 1.3
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.04
+        l1: 1.6
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.04
+        l1: 2
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.05
+        l1: 1
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.05
+        l1: 1.3
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.05
+        l1: 1.6
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
+-
+    file_name: loop-60deg-l1={l1}um-width={width}um
+    enable: True
+    y_labels: |
+        d1
+        {Y}
+    x_labels: l2={X}um
+    x_key: l2
+    y_key: d1
+    parameters:
+        width: 0.05
+        l1: 2
+        l2: [0.4, 0.5, 0.5, 0.6, 0.6, 0.7, 0.8]
+        d1: [2.1, 2.2, 2.3, 2.35, 2.4, 2.5, 2.6]
+        d2: 1.2
+        la: 1
+        loop_type: high-angle-60deg
+        layer: 10
+        sw_layer: 20
+        twin_enable: True
