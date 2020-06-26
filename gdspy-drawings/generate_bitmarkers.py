@@ -17,8 +17,13 @@ def bitmarker_array(cell):
     dx = 20
     dy = 20 
     # text_size = 100
-    nrows = 250
-    ncols = 250
+    nrows = 150
+    ncols = 150
+
+    output_dir = r'/Users/wgz/Downloads'
+    title = 'BitmarkerArray'
+
+    cell = gp.Cell(title)
 
     for x in range(ncols):
         for y in range(nrows):
@@ -29,8 +34,10 @@ def bitmarker_array(cell):
             shape.translate(-dx*ncols/2 + x*dx, dy*nrows/2 + -y*dy)
             cell.add(shape)
 
-def RP20_set():
-    oneSquare = gp.Rectangle((-10,-10), (10,10))
+    # gp.LayoutViewer(cells=[cell])
+
+    gp.write_gds(os.path.join(output_dir, title + '.gds'), cells=[cell], unit=1.0e-6, precision=1e-10)
+
 
 def bitmarker_2inch():
     dx = 20
@@ -57,4 +64,4 @@ bitmarker_array(cell)
 
 gp.LayoutViewer(cells=[cell])
 
-gp.write_gds(os.path.join(output_dir, title + '.gds'), cells=[cell], unit=1.0e-6, precision=1e-10)
+bitmarker_array()
