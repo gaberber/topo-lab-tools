@@ -8,17 +8,17 @@ import os, string
 import gdspy as gp
 import design_tools as tools
 
-def bitmarker_array():
+output_dir = r'E:\Patterns'
+title = 'BitmarkerArray'
+
+cell = gp.Cell(title)
+
+def bitmarker_array(cell):
     dx = 20
     dy = 20 
     # text_size = 100
-    nrows = 32
-    ncols = 32
-
-    output_dir = r'/Users/wgz/Downloads'
-    title = 'BitmarkerArray'
-
-    cell = gp.Cell(title)
+    nrows = 250
+    ncols = 250
 
     for x in range(ncols):
         for y in range(nrows):
@@ -26,15 +26,11 @@ def bitmarker_array():
             # y_label = str(y)
             # shape = gp.Text(x_label+y_label, text_size, position=(x*dx, -y*dy), layer=10)
             shape = tools.bitmarker(x, y)
-            shape.translate(x*dx, -y*dy)
+            shape.translate(-dx*ncols/2 + x*dx, dy*nrows/2 + -y*dy)
             cell.add(shape)
 
-    gp.LayoutViewer(cells=[cell])
-
-    gp.write_gds(os.path.join(output_dir, title + '.gds'), cells=[cell], unit=1.0e-6, precision=1e-10)
-
 def RP20_set():
-    pass
+    oneSquare = gp.Rectangle((-10,-10), (10,10))
 
 def bitmarker_2inch():
     dx = 20
@@ -57,4 +53,8 @@ def bitmarker_2inch():
     gp.write_gds(os.path.join(output_dir, title + '.gds'), cells=[cell], unit=1.0e-6, 
     precision=1e-10)
 
+bitmarker_array(cell)
 
+gp.LayoutViewer(cells=[cell])
+
+gp.write_gds(os.path.join(output_dir, title + '.gds'), cells=[cell], unit=1.0e-6, precision=1e-10)
