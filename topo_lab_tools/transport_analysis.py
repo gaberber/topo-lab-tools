@@ -49,7 +49,7 @@ def guess_2D_dims(inner_axis, outer_axis, data_2d, rescale_xy = True):
         return data_2d[:total_num].reshape(dims_guess), dims_guess
 
 
-def batch_guess_2D_dims(inner_axis, outer_axis, data_2d_list, rescale_xy = True):
+def batch_guess_2D_dims(inner_axis, outer_axis, data_2d_list):
     new_dlist = []
     for d in data_2d_list:
         new_d, dims = guess_2D_dims(inner_axis, outer_axis, d, rescale_xy=False)
