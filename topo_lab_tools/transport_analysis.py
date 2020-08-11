@@ -50,6 +50,10 @@ def guess_2D_dims(inner_axis, outer_axis, data_2d, rescale_xy = True):
 
 
 def batch_guess_2D_dims(inner_axis, outer_axis, data_2d_list):
+    '''
+    Runs guess_2D_dims on each element of the data_2d_list
+    Returns reshaped reshaped inner, outer axes and a list of matrices
+    '''
     new_dlist = []
     for d in data_2d_list:
         new_d, dims = guess_2D_dims(inner_axis, outer_axis, d, rescale_xy=False)
