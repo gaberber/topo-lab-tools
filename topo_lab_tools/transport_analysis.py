@@ -2,7 +2,32 @@ import os, re
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
-from qcodes import load_by_run_spec
+from qcodes import load_by_run_spec, initialise_or_create_database_at
+import qcodes as qc
+import pandas as pd
+import matplotlib
+matplotlib.rcParams["text.usetex"] = False
+#matplotlib.rcParams["font.family"] = "Helvetica"
+matplotlib.rcParams["text.latex.preamble"] = "\\usepackage{amsmath}"
+matplotlib.rcParams["axes.labelsize"] = 16
+matplotlib.rcParams["xtick.labelsize"] = 16
+matplotlib.rcParams["ytick.labelsize"] = 16
+matplotlib.rcParams["font.size"] = 15
+matplotlib.rcParams["figure.figsize"] = [12,5]
+matplotlib.rcParams["ytick.major.size"] = 8
+matplotlib.rcParams["ytick.major.width"] = 1.5
+matplotlib.rcParams["ytick.minor.size"] = 4
+matplotlib.rcParams["ytick.minor.width"] = 1
+matplotlib.rcParams["ytick.direction"] = "in"
+matplotlib.rcParams["xtick.major.size"] = 8
+matplotlib.rcParams["xtick.major.width"] = 1.5
+matplotlib.rcParams["xtick.direction"] = "in"
+matplotlib.rcParams["xtick.minor.size"] = 4
+matplotlib.rcParams["xtick.minor.width"] = 1
+matplotlib.rcParams["savefig.bbox"] = "tight"
+matplotlib.rcParams["savefig.pad_inches"] = 0.05
+matplotlib.rcParams["axes.linewidth"] = 1.5
+matplotlib.rcParams["legend.fontsize"] = 14
 def guess_2D_dims(inner_axis, outer_axis, data_2d, rescale_xy = True):
     '''
     Takes X, Y and Z from load_by_id() as inputs.
@@ -107,12 +132,40 @@ class Dataset_2d_spyview(Dataset_2d):
         col_labels = [metadata[k].strip() for k in range(13, len(metadata), 2)]
         
         Dataset_2d.create_labels(self, metadata[3].strip(), metadata[7].strip(), col_labels)
-  
+
+def init_qcodes(data_dir, db_name):
+    qc.config["core"]["db_location"] = data_dir
+    assert os.path.isdir(data_dir), "'{}' Is not a Directory".format(data_dir)
+    ls= os.listdir(data_dir)
+    A = [re.findall(db_name, st.replace(".db", "")) for st in ls]
+    i = 0
+    for a in A:
+        if len(a)>0:
+            if a[0]+".db" in ls: 
+                i+=1
+                print(a[0])
+    assert i>0, "'{0}' not found in '{1}' \n These exist: {2}".format(db_name, data_dir, ls)
+    initialise_or_create_database_at("{0}/{1}".format(data_dir, db_name) + ".db" )
+
 class Dataset_qcodes(Dataset_2d):
     def __init__(self, run_id):
-        """
-        Reads a qcodes database.
-        """
+        """Reads a qcodes database. automatically renames instruments (keithleys and lockins)
+        Arguments:
+            run_id: the id associated with the measurement
+        Instances: 
+            id
+            exp_name
+            sample_name
+            data
+            data_labels
+            instruments
+        Methods:
+            subt_line_resist: subtracts line resistance from Vbias, Vac
+            diff_cond: computes differential conductance and stores it in self.G
+            colormesh: 2D plot of data
+            linecut
+            """
+        
         self.dataset = load_by_run_spec(captured_run_id=run_id)
         self.id = run_id
         self.exp_name = self.dataset.exp_name
@@ -121,30 +174,178 @@ class Dataset_qcodes(Dataset_2d):
         self.data_labels = self.data.keys()
         self.instruments = self.dataset.snapshot['station']["instruments"].keys()
         self.rename_instruments()
-        self.line_restist_sub = False
+        self.line_resist_sub = False
         
-    def diff_cond(self, lockin=1, ac_scaling = 1):
-        #G = self.data["dIdV {}".format(i)]
-        if not self.line_restist_sub:
+    def diff_cond(self, column, ac_scaling = 1):
+        assert column in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
+        
+        dI = self.data[column]
+        
+        dV = ac_scaling * self.lockins_ac[column]
+        if not self.line_resist_sub:
             print("Beware, line resistance is not subtracted yet")
-        dI = self.data["lockin {}".format(lockin)]
-        dV = ac_scaling * self.lockins_ac["lockin {}".format(lockin)]
-        self.G = 12906*dI.values.reshape(len(dI))/dV.reshape(len(dI))
-        
+            y,x = self.data[column].index.levels
+            self.y = y.values
+            self.y_lab = y.name
+            self.x = x.values
+            self.x_lab = x.name
+            self.G = 12906*(dI.values.reshape(len(dI))/dV)
+            self.G = self.G.reshape(len(self.y), len(self.x))
+            if len(self.y) == len(self.x):
+                self.G = self.G[::1, ::-1].T
+            
+        elif self.line_resist_sub:
+            if type(dI.index) == pd.MultiIndex:
+                _dI = dI.values.reshape(len(dI))
+                L = np.prod(dV.shape)
+                if len(_dI) < L:
+                    _dI = np.pad(_dI, (0, L-len(_dI)))
+                self.G = 12906*_dI.reshape(len(_dI))/dV.reshape(len(_dI))
+                try:
+                    self.G = self.G.reshape(self.z.shape)
+                except (AttributeError,ValueError):
+                    x,y = self.data[column].index.levels
+                    self.G = self.G.reshape(len(x), len(y))
+                    if len(y) == len(x):
+                        self.G = self.G[::1, ::-1].T
+            else:
+                self.G = 12906*dI.values.reshape(len(dI))/dV.reshape(len(dI))
+    
+    def colormesh(self, column="lockin 1", **pcolorkwargs):
+        fig, ax = plt.subplots(figsize=(15,6))
+        title = self.exp_name + " ({})".format(str(self.id))
+        ax.set_title(title)
+        if "lockin" in column:
+            assert self.G.any(), "Differential Conductance not computed, run diff_cond"
+            y = np.repeat(self.y, self.G.shape[1]).reshape(self.G.shape)
+            if self.line_resist_sub:
+                p = ax.pcolor(self.V_new, y, self.G, cmap = 'inferno', **pcolorkwargs)
+            else:
+                p = ax.pcolor(self.x, self.y, self.G, cmap = 'inferno', **pcolorkwargs)
+            ax.set_xlabel(self.x_lab)
+            ax.set_ylabel(self.y_lab)
+            cbar = plt.colorbar(p)
+            cbar.set_label(r"$dI/dV (G_0)$")
+        elif "keithley" in column:
+            assert column in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
+            y,x = self.data[column].index.levels
+            I_measure = self.data[column].values
+            I_measure = I_measure.reshape(len(I_measure))
+            L = len(x) * len(y)
+            if len(I_measure) < L:
+                I_measure = np.pad(I_measure, (0, L-len(I_measure)))
+            try:    
+                I_measure = I_measure.reshape((len(y), len(x)))
+                y = np.repeat(self.y, len(x)).reshape((len(y), len(x)))
+            except ValueError:
+                I_measure = I_measure.reshape((len(x), len(y)))
+                y = np.repeat(self.y, len(y)).reshape((len(x), len(y)))
+            if self.line_resist_sub:
+                p = ax.pcolor(self.V_new, y, I_measure, cmap = 'inferno')
+            else:
+                p = ax.pcolor(self.x, y, I_measure, cmap = 'inferno')
+            ax.set_xlabel(self.x_lab)
+            ax.set_ylabel(self.y_lab)
+            cbar = plt.colorbar(p)
+            cbar.set_label(column)
+            
+            
+    def linecut(self, column="lockin 1", line=0, digs = 2, **plotkwargs):
+        title = self.exp_name + " ({})".format(str(self.id))
+        plt.title(title)
+        if "lockin" in column:
+            assert self.G.any(), "Differential Conductance not computed, run diff_cond"
+            #y = np.repeat(self.y, self.G.shape[1]).reshape(self.G.shape)
+            if self.line_resist_sub:
+                p = plt.plot(self.V_new[line,:], self.G[line,:], label = self.y_lab + "= {}".format(round(self.y[line], digs)), **plotkwargs)
+            else:
+                p = plt.plot(self.x[line, :], self.G[line,:], label = self.y_lab + "= {}".format(round(self.y[line], digs)), **plotkwargs)
+            plt.xlabel(self.x_lab)
+            plt.ylabel(r"$dI/dV (G_0)$")
+            plt.legend()
+        elif "keithley" in column:
+            assert column in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
+            y,x = self.data[column].index.levels
+            I_measure = self.data[column].values
+            I_measure = I_measure.reshape(len(I_measure))
+            L = len(x) * len(y)
+            if len(I_measure) < L:
+                I_measure = np.pad(I_measure, (0, L-len(I_measure)))
+            try:    
+                I_measure = I_measure.reshape((len(y), len(x)))
+                y = np.repeat(self.y, len(x)).reshape((len(y), len(x)))
+            except ValueError:
+                I_measure = I_measure.reshape((len(x), len(y)))
+                #y = np.repeat(self.y, len(y)).reshape((len(x), len(y)))
                 
-    def subt_line_resist(self, I_measure_col, lineR=8484):
+            if self.line_resist_sub:
+                p = plt.plot(self.V_new[line,:], I_measure[line,:], label = self.y_lab + "= {}".format(round(self.y[line], digs)), **plotkwargs)
+            else:
+                p = plt.plot(self.x[line,:], I_measure[line,:], label = self.y_lab + "= {}".format(round(self.y[line], digs)), **plotkwargs)
+            plt.xlabel(self.x_lab)
+            plt.ylabel("I")
+            plt.legend()
+    
+    def plot1D(self, column="lockin 1", **plotkwargs):
+        title = self.exp_name + " ({})".format(str(self.id))
+        plt.title(title)
+        if "lockin" in column:
+            assert self.G.any(), "Differential Conductance not computed, run diff_cond"
+            #y = np.repeat(self.y, self.G.shape[1]).reshape(self.G.shape)
+            if self.line_resist_sub:
+                p = plt.plot(self.V_new, self.G, **plotkwargs)
+            else:
+                p = plt.plot(self.x, self.G, **plotkwargs)
+            plt.xlabel(self.x_lab)
+            plt.ylabel(r"$dI/dV (G_0)$")
+        elif "keithley" in column:
+            assert column in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
+            I_measure = self.data[column].values
+            I_measure = I_measure.reshape(len(I_measure))
+                
+            if self.line_resist_sub:
+                p = plt.plot(self.V_new, I_measure, **plotkwargs)
+            else:
+                p = plt.plot(self.x, I_measure, **plotkwargs)
+            plt.xlabel(self.x_lab)
+            plt.ylabel("I")
+        
+    def subt_line_resist(self, I_measure_col, lineR=8484, index_bias_2d=1):
+        """
+        Function for subtracting line resistance from AC and DC voltage
+        Arguments:
+            I_measure_col: the keithley that measures voltage drop over the device. Note that this is 
+        
+        """
         assert I_measure_col in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
-        assert not self.line_restist_sub, "Line resist already subtracted"
+        assert not self.line_resist_sub, "Line resist already subtracted"
         I_measure = self.data[I_measure_col].values
         I_measure = I_measure.reshape(len(I_measure))
-        V_bias = self.data[I_measure_col].index.values
-        V_bias = V_bias.reshape(len(I_measure))
-        R = V_bias/I_measure
-        self.V_new = V_bias * (R/(R + lineR))
-        for k,v in self.lockins_ac.items():
-            self.lockins_ac[k] = self.lockins_ac[k] * (R/(R + lineR))
+        if type(self.data[I_measure_col].index) != pd.MultiIndex:
+            V_bias = self.data[I_measure_col].index.values
+            V_bias_resize = V_bias.reshape(len(I_measure))
+        else:
+            index_y = 1- index_bias_2d
+            V_bias = self.data[I_measure_col].index.levels[index_y].values
+            self.y_lab = self.data[I_measure_col].index.levels[index_bias_2d].name
+            self.y= self.data[I_measure_col].index.levels[index_bias_2d].values
+            L = len(self.y) * len(V_bias)
+            if len(I_measure) < L:
+                I_measure = np.pad(I_measure, (0, L-len(I_measure)))
+            I_measure = I_measure.reshape(len(self.y), (len(V_bias)))
+            V_bias_resize = V_bias.reshape(1,len(V_bias))    
         
-        self.line_restist_sub = True
+        R = V_bias_resize/I_measure
+        self.V_new = V_bias_resize * (R/(R + lineR))
+        for k,v in self.lockins_ac.items():
+            _ac = self.lockins_ac[k]
+            self.lockins_ac[k] = self.lockins_ac[k] * (R/(R + lineR))
+            self.lockins_ac[k][self.lockins_ac[k] ==0] = _ac
+        self.x = self.V_new
+        self.x_lab = r"$V_{bias}$"
+        self.z = I_measure
+        self.z_lab = I_measure_col
+        self.line_resist_sub = True
             
     def rename_instruments(self):
         self.lockins_ac= {}
@@ -153,7 +354,6 @@ class Dataset_qcodes(Dataset_2d):
             a = re.search("lockin", instrument)
             if a:
                 i += 1
-                
                 V_ac = self.dataset.snapshot['station']["instruments"][instrument]['parameters']['amplitude']['value']
                 self.lockins_ac["lockin {}".format(i)] = V_ac
                 _d = self.dataset.snapshot['station']["instruments"][instrument] 
