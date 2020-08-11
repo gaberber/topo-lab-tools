@@ -149,7 +149,8 @@ def init_qcodes(data_dir, db_name):
 
 class Dataset_qcodes(Dataset_2d):
     def __init__(self, run_id):
-        """Reads a qcodes database. automatically renames instruments (keithleys and lockins)
+        """
+        Reads a qcodes database. automatically renames instruments (keithleys and lockins)
         Arguments:
             run_id: the id associated with the measurement
         Instances: 
@@ -164,7 +165,7 @@ class Dataset_qcodes(Dataset_2d):
             diff_cond: computes differential conductance and stores it in self.G
             colormesh: 2D plot of data
             linecut
-            """
+        """
         
         self.dataset = load_by_run_spec(captured_run_id=run_id)
         self.id = run_id
