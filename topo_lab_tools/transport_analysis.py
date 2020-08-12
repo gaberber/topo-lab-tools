@@ -5,10 +5,12 @@ from matplotlib import pyplot as plt
 from qcodes import load_by_run_spec, initialise_or_create_database_at
 import qcodes as qc
 import pandas as pd
+import copy
 import matplotlib
 matplotlib.rcParams["text.usetex"] = False
 #matplotlib.rcParams["font.family"] = "Helvetica"
 matplotlib.rcParams["text.latex.preamble"] = "\\usepackage{amsmath}"
+matplotlib.rcParams["figure.max_open_warning"]
 matplotlib.rcParams["axes.labelsize"] = 16
 matplotlib.rcParams["xtick.labelsize"] = 16
 matplotlib.rcParams["ytick.labelsize"] = 16
@@ -147,7 +149,6 @@ def init_qcodes(data_dir, db_name):
         if len(a)>0:
             if a[0]+".db" in ls: 
                 i+=1
-                print(a[0])
     assert i>0, "'{0}' not found in '{1}' \n These exist: {2}".format(db_name, data_dir, ls)
     initialise_or_create_database_at("{0}/{1}".format(data_dir, db_name) + ".db" )
 
@@ -168,7 +169,7 @@ class Dataset_qcodes(Dataset_2d):
             subt_line_resist: subtracts line resistance from Vbias, Vac
             diff_cond: computes differential conductance and stores it in self.G
             colormesh: 2D plot of data
-            linecut
+            linecut: 1D slice of data
         """
         
         self.dataset = load_by_run_spec(captured_run_id=run_id)
@@ -178,14 +179,20 @@ class Dataset_qcodes(Dataset_2d):
         self.data = self.dataset.get_data_as_pandas_dataframe()
         self.data_labels = self.data.keys()
         self.instruments = self.dataset.snapshot['station']["instruments"].keys()
-        self.rename_instruments()
+        self._rename_instruments_init()
         self.line_resist_sub = False
         
     def diff_cond(self, column, ac_scaling = 1):
+        """computes differential conductance and stores it in self.G
+        Works with and without running self.subt_line_resist
+        Arguments:
+            column: string like 'lockin 1' or 'lockin 2' containing the dI data
+            ac_scaling: conversion of amp on lockin to actual unit in Volts
+        Creates:
+            self.G: the differential conductance in G0 """
+        
         assert column in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
-        
         dI = self.data[column]
-        
         dV = ac_scaling * self.lockins_ac[column]
         if not self.line_resist_sub:
             print("Beware, line resistance is not subtracted yet")
@@ -217,7 +224,15 @@ class Dataset_qcodes(Dataset_2d):
                 self.G = 12906*dI.values.reshape(len(dI))/dV.reshape(len(dI))
     
     def colormesh(self, column="lockin 1", **pcolorkwargs):
-        fig, ax = plt.subplots(figsize=(15,6))
+        """2d plot of a measured value
+        Arguments:
+            column: string like 'lockin 1' or 'keithley 2' 
+            pcolorkwargs: [OPT] any argument you would put in plt.pcolor()"""
+        if not 'ax' in pcolorkwargs:
+            fig, ax = plt.subplots(figsize=(15,6))
+        else:
+            ax=pcolorkwargs['ax']
+            del pcolorkwargs['ax']
         title = self.exp_name + " ({})".format(str(self.id))
         ax.set_title(title)
         if "lockin" in column:
@@ -229,7 +244,7 @@ class Dataset_qcodes(Dataset_2d):
                 p = ax.pcolor(self.x, self.y, self.G, cmap = 'inferno', **pcolorkwargs)
             ax.set_xlabel(self.x_lab)
             ax.set_ylabel(self.y_lab)
-            cbar = plt.colorbar(p)
+            cbar = plt.colorbar(p, ax=ax)
             cbar.set_label(r"$dI/dV (G_0)$")
         elif "keithley" in column:
             assert column in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
@@ -251,11 +266,18 @@ class Dataset_qcodes(Dataset_2d):
                 p = ax.pcolor(self.x, y, I_measure, cmap = 'inferno')
             ax.set_xlabel(self.x_lab)
             ax.set_ylabel(self.y_lab)
-            cbar = plt.colorbar(p)
+            cbar = plt.colorbar(p, ax=ax)
             cbar.set_label(column)
             
             
     def linecut(self, column="lockin 1", line=0, digs = 2, **plotkwargs):
+        """1d linecut plot of a 2dmap
+        Arguments:
+            column: string like 'lockin 1' or 'keithley 2' 
+            line: [OPT] index of the y-value for which you want a linecut
+            digs: [OPT] amount of digits of y-value in legend
+            pcolorkwargs: [OPT] any argument you would put in plt.pcolor()"""
+        
         title = self.exp_name + " ({})".format(str(self.id))
         plt.title(title)
         if "lockin" in column:
@@ -292,6 +314,12 @@ class Dataset_qcodes(Dataset_2d):
             plt.legend()
     
     def plot1D(self, column="lockin 1", **plotkwargs):
+        """1d plot of a measured value
+        Arguments:
+            column: string like 'lockin 1' or 'keithley 2' 
+            pcolorkwargs: [OPT] any argument you would put in plt.plot()"""
+        
+        plt.figure()
         title = self.exp_name + " ({})".format(str(self.id))
         plt.title(title)
         if "lockin" in column:
@@ -320,6 +348,11 @@ class Dataset_qcodes(Dataset_2d):
         Function for subtracting line resistance from AC and DC voltage
         Arguments:
             I_measure_col: the keithley that measures voltage drop over the device. Note that this is 
+            lineR: the line resistance in ohms
+            index_bias_2d: which sweep axis is Vbias, either 0 or 1
+        creates:
+            self.V_new: the new 2D Vbias array. It's 2d because of different resistances per linescan
+            self.y, self.y_lab: the y parameter and its label. Often field or gate
         
         """
         assert I_measure_col in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
@@ -351,8 +384,22 @@ class Dataset_qcodes(Dataset_2d):
         self.z = I_measure
         self.z_lab = I_measure_col
         self.line_resist_sub = True
+    
+    def rename_columns(self, dc):
+        """rename data columns according to a dictionary
+        Arguments:
+            dc: dict containing old columns as keys, new columns as values"""
+        cols = copy.deepcopy(self.data)
+        for k,v in dc.items():
+            assert k in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
+            _d = self.data[k] 
+            del self.data[k]
+            self.data[v] = _d
             
-    def rename_instruments(self):
+        self.data_labels = self.data.keys()
+            
+    
+    def _rename_instruments_init(self):
         self.lockins_ac= {}
         i = 0
         for instrument in self.instruments:
@@ -362,8 +409,6 @@ class Dataset_qcodes(Dataset_2d):
                 V_ac = self.dataset.snapshot['station']["instruments"][instrument]['parameters']['amplitude']['value']
                 self.lockins_ac["lockin {}".format(i)] = V_ac
                 _d = self.dataset.snapshot['station']["instruments"][instrument] 
-                #del self.dataset.snapshot['station']["instruments"][instrument]
-                #print(self.dataset.snapshot['station']["instruments"].keys())
                 self.dataset.snapshot['station']["instruments"]["lockin {}".format(i)]=_d
                 
         self.keithleys= 0
@@ -372,7 +417,7 @@ class Dataset_qcodes(Dataset_2d):
             if a:
                 self.keithleys += 1
         i=1   
-        cols = self.data.keys()
+        cols = copy.deepcopy(self.data)
         for col in cols:
             a = re.search("keithley", col)
             if a:
