@@ -30,6 +30,13 @@ matplotlib.rcParams["savefig.bbox"] = "tight"
 matplotlib.rcParams["savefig.pad_inches"] = 0.05
 matplotlib.rcParams["axes.linewidth"] = 1.5
 matplotlib.rcParams["legend.fontsize"] = 14
+
+
+"""
+---------------------------------------------------------------------------------------------------
+                                    Spyview Data Objects
+---------------------------------------------------------------------------------------------------
+"""
 def guess_2D_dims(inner_axis, outer_axis, data_2d, rescale_xy = True):
     '''
     Takes X, Y and Z from load_by_id() as inputs.
@@ -139,6 +146,12 @@ class Dataset_2d_spyview(Dataset_2d):
         
         Dataset_2d.create_labels(self, metadata[3].strip(), metadata[7].strip(), col_labels)
 
+"""
+---------------------------------------------------------------------------------------------------
+                                    Qcodes Data Objects
+---------------------------------------------------------------------------------------------------
+"""
+        
 def init_qcodes(data_dir, db_name):
     qc.config["core"]["db_location"] = data_dir
     assert os.path.isdir(data_dir), "'{}' Is not a Directory".format(data_dir)
@@ -152,7 +165,7 @@ def init_qcodes(data_dir, db_name):
     assert i>0, "'{0}' not found in '{1}' \n These exist: {2}".format(db_name, data_dir, ls)
     initialise_or_create_database_at("{0}/{1}".format(data_dir, db_name) + ".db" )
 
-class Dataset_qcodes(Dataset_2d):
+class Dataset_qcodes():
     def __init__(self, run_id):
         """
         Reads a qcodes database. automatically renames instruments (keithleys and lockins)
@@ -334,11 +347,15 @@ class Dataset_qcodes(Dataset_2d):
         elif "keithley" in column:
             assert column in self.data_labels, "column doesn't exist, choose from: {}".format(self.data_labels)
             I_measure = self.data[column].values
+            index = self.data[column].index
             I_measure = I_measure.reshape(len(I_measure))
                 
             if self.line_resist_sub:
                 p = plt.plot(self.V_new, I_measure, **plotkwargs)
             else:
+                self.x = index.values
+                self.x_lab = index.name
+                self.y = I_measure
                 p = plt.plot(self.x, I_measure, **plotkwargs)
             plt.xlabel(self.x_lab)
             plt.ylabel("I")
