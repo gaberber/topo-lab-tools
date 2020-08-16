@@ -42,7 +42,7 @@ def plot_colormap_interactive(fig, ax, x, y, z, xlabel=None, ylabel=None, zlabel
 
     buttons_colorscheme = RadioButtons(ax_colorscheme, \
                                         ['viridis', 'plasma', 'magma', \
-                                        'cividis', 'seismic', 'gist_stern'],\
+                                        'cividis', 'RdBu', 'RdBu_r'],\
                                          activecolor='#206ba9')
 
     def _colorfunc(label):
