@@ -4,11 +4,15 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, RadioButtons
 
 
-def plot_colormap_interactive(fig, ax, x, y, z, xlabel=None, ylabel=None, zlabel=None):
+def plot_colormap_interactive(x, y, z, xlabel=None, ylabel=None, zlabel=None, additional_cmaps = []):
     '''
-    Takes the fig and ax created from plt.subplots() and plots x, y, z
+    Plots x, y, z, possibly with labels.
+    Built-in list of colormaps to choose from: viridis, magma, RdBu_r.
+    More cmap options can be added.
+    Returns the fig, ax created by plt.subplots() and the image by pcolormesh().
     '''
     
+    fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.3, left=0.35)
 
     heat_map = plt.pcolormesh(x, y, z)
@@ -41,8 +45,7 @@ def plot_colormap_interactive(fig, ax, x, y, z, xlabel=None, ylabel=None, zlabel
     slider_gamma.on_changed(_update)
 
     buttons_colorscheme = RadioButtons(ax_colorscheme, \
-                                        ['viridis', 'plasma', 'magma', \
-                                        'cividis', 'RdBu', 'RdBu_r'],\
+                                        ['viridis', 'magma', 'RdBu_r'] + additional_cmaps,\
                                          activecolor='#206ba9')
 
     def _colorfunc(label):
@@ -50,3 +53,5 @@ def plot_colormap_interactive(fig, ax, x, y, z, xlabel=None, ylabel=None, zlabel
         fig.canvas.draw_idle()
 
     buttons_colorscheme.on_clicked(_colorfunc)
+
+    return fig, ax, heat_map
