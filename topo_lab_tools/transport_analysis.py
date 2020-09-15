@@ -34,7 +34,7 @@ matplotlib.rcParams["legend.fontsize"] = 14
 
 """
 ---------------------------------------------------------------------------------------------------
-                                    Spyview Data Objects
+                                Generic Functions and Data Objects
 ---------------------------------------------------------------------------------------------------
 """
 def guess_2D_dims(inner_axis, outer_axis, data_2d, rescale_xy = True):
@@ -73,6 +73,122 @@ def batch_guess_2D_dims(inner_axis, outer_axis, data_2d_list):
     return new_inner_axis, new_outer_axis, new_dlist, dims
 
 
+class Dataset_3T():
+    def __init__(self, VL, VR, Is_VL, Is_VR, gs_VL, gs_VR, y_param, y_param_label):
+        """
+        A data-storage-format-agnostic class storing and performing most common operations
+        on full conductance matrix measurements.
+        Inputs are np.array's in proper shapes or lists of them.
+        VL, VR: DC bias on left and right.
+        Is_VL, Is_VR: each contains IL and IR wrt respective bias sweeps.
+        gs_VL, gs_VR: each contains in order: gLL, gLR, gRL, gRR wrt respective biases.
+        All units in SI.
+        y_param, y_param_label: meaning-agnostic y axis.
+        Unpacks all inputs into individual np.array's.
+        """
+        self.VL, self.VR = VL, VR
+        self.IL_VL, self.IR_VL = Is_VL
+        self.IL_VR, self.IR_VR = Is_VR
+        self.gLL_VL, self.gLR_VL, self.gRL_VL, self.gRR_VL = gs_VL
+        self.gLL_VR, self.gLR_VR, self.gRL_VR, self.gRR_VR = gs_VR
+        self.y_param, self.y_param_label = y_param, y_param_label
+        
+    def plot_cond_matrix(self, corr = False):
+        """
+        Creates a figure with four panels plotting the conductance matrix.
+        Stores the fig and axes as attributes of this instance for external use.
+        Enabling corr option will make it plot gLL_VL_corr etc.
+        """
+        def _make_cbar(ax, mesh, label):
+            cbar = plt.colorbar(mesh, ax=ax)
+            cbar.set_label(label, rotation=90)
+            return cbar
+        
+        self.fig, self.axes = plt.subplots(2, 2, figsize = (8, 8))
+        self.heatmaps = {}
+        
+        if corr:
+            gLL, gLR, gRL, gRR = self.gLL_VL_corr, self.gLR_VR_corr, self.gRL_VL_corr, self.gRR_VR_corr
+            VL, VR = self.VL_corr, self.VR_corr
+        else:
+            gLL, gLR, gRL, gRR = self.gLL_VL, self.gLR_VR, self.gRL_VL, self.gRR_VR
+            VL, VR = self.VL, self.VR
+
+        ax = self.axes[0,0]
+        mesh = ax.pcolormesh(VL*1e3, self.y_param, gLL*12906, cmap='magma')
+        ax.set_xlabel('$V_L$ (mV)')
+        ax.set_title('$g_{LL}$')
+        cbar = _make_cbar(ax, mesh, '$g_{LL}$ ($G_0$)')
+        self.heatmaps['LL'] = mesh, cbar
+
+        ax = self.axes[0,1]
+        mesh = ax.pcolormesh(VR*1e3, self.y_param, gLR*12906, cmap='RdBu_r')
+        ax.set_xlabel('$V_R$ (mV)')
+        ax.set_title('$g_{LR}$')
+        cbar = _make_cbar(ax, mesh, '$g_{LR}$ ($G_0$)')
+        self.heatmaps['LR'] = mesh, cbar
+
+        ax = self.axes[1,0]
+        mesh = ax.pcolormesh(VL*1e3, self.y_param, gRL*12906, cmap='RdBu_r')
+        ax.set_xlabel('$V_L$ (mV)')
+        ax.set_title('$g_{RL}$')
+        cbar = _make_cbar(ax, mesh, '$g_{RL}$ ($G_0$)')
+        self.heatmaps['RL'] = mesh, cbar
+
+        ax = self.axes[1,1]
+        mesh = ax.pcolormesh(VR*1e3, self.y_param, gRR*12906, cmap='magma')
+        ax.set_xlabel('$V_R$ (mV)')
+        ax.set_title('$g_{RR}$')
+        cbar = _make_cbar(ax, mesh, '$g_{RR}$ ($G_0$)')
+        self.heatmaps['RR'] = mesh, cbar
+
+        for ax in self.axes.flatten():
+            ax.set_ylabel(self.y_param_label)
+        self.fig.tight_layout()
+        
+    def update_minmax(self, label, vmin, vmax):
+        """
+        label: in {'LL', 'LR', 'RL', 'RR'}
+        Updates the corresponding panel directly
+        """
+        norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        mesh, cbar = self.heatmaps[label]
+        mesh.set_norm(norm)
+        cbar.update_normal(mesh)
+        
+    def correct_dcac(self, Rline):
+        """
+        Rline is series R (Ohm) on ONE fridge line.
+        Creates self.VR_corr, self.VL_corr, self.gLL_VL_corr etc etc.
+        """
+        # correcting DC bias 
+        self.VR_corr = (self.VR - self.IR_VR * Rline - (self.IL_VR + self.IR_VR) * Rline)
+        self.VL_corr = (self.VL - self.IL_VL * Rline - (self.IL_VL + self.IR_VL) * Rline)
+
+        # correcting AC signal
+        R_mat = Rline * np.array([[2, 1], [1, 2]])
+        self.gLL_VL_corr, self.gLR_VL_corr, self.gRL_VL_corr, self.gRR_VL_corr = [np.empty_like(self.gLL_VL) for k in range(4)]
+        self.gLL_VR_corr, self.gLR_VR_corr, self.gRL_VR_corr, self.gRR_VR_corr = [np.empty_like(self.gLL_VL) for k in range(4)]
+        for k_row in range(self.gLL_VL.shape[0]):
+            for k_col in range(self.gLL_VL.shape[1]):
+                gmat_VL = np.array([[self.gLL_VL[k_row, k_col], self.gLR_VL[k_row, k_col]], \
+                                  [self.gRL_VL[k_row, k_col], self.gRR_VL[k_row, k_col]]])
+                V_jacobian_VL = np.eye(2) - R_mat.dot(gmat_VL)
+                gmat_VL_corr = gmat_VL.dot(np.linalg.inv(V_jacobian_VL))
+                self.gLL_VL_corr[k_row, k_col], self.gLR_VL_corr[k_row, k_col], self.gRL_VL_corr[k_row, k_col], self.gRR_VL_corr[k_row, k_col] = gmat_VL_corr.flatten()
+                
+                gmat_VR = np.array([[self.gLL_VR[k_row, k_col], self.gLR_VR[k_row, k_col]], \
+                                  [self.gRL_VR[k_row, k_col], self.gRR_VR[k_row, k_col]]])
+                V_jacobian_VR = np.eye(2) - R_mat.dot(gmat_VR)
+                gmat_VR_corr = gmat_VR.dot(np.linalg.inv(V_jacobian_VR))
+                self.gLL_VR_corr[k_row, k_col], self.gLR_VR_corr[k_row, k_col], self.gRL_VR_corr[k_row, k_col], self.gRR_VR_corr[k_row, k_col] = gmat_VR_corr.flatten()
+
+
+"""
+---------------------------------------------------------------------------------------------------
+                                    Spyview Data Objects
+---------------------------------------------------------------------------------------------------
+"""
 def import_spyview_dat(data_dir, filename):
     """
     Returns a np.array in the same shape as the raw .dat file
@@ -145,6 +261,77 @@ class Dataset_2d_spyview(Dataset_2d):
         col_labels = [metadata[k].strip() for k in range(13, len(metadata), 2)]
         
         Dataset_2d.create_labels(self, metadata[3].strip(), metadata[7].strip(), col_labels)
+
+
+def plot_spyview_columns(dataset, columns_list):
+    """
+    dataset: Dataset_2d_spyview, which can in fact be 1D
+    columns_list: a list of columns (as shown in Spyview, so starting from 4) to plot
+    Returns the fig and axs created here.
+    """
+    fig, axs = plt.subplots(len(columns_list), 1, figsize=(6, 2*len(columns_list)))
+    for ax, col in zip(axs, columns_list):
+        if dataset.dims[0] == 1:
+            ax.plot(dataset.x, dataset.z_list[col - 4][0,:])
+            ax.set_ylabel(dataset.zlabel_list[col - 4])
+            ax.set_xlabel(dataset.xlabel)
+        else:
+            mesh = ax.pcolormesh(dataset.x, dataset.y, dataset.z_list[col-4], cmap='viridis')
+            ax.set_ylabel(dataset.ylabel)
+            cbar = plt.colorbar(mesh, ax = ax, label=dataset.zlabel_list[col - 4])
+    axs[0].set_title(dataset.filename)
+    fig.tight_layout()
+    return fig, axs
+
+
+class Dataset_BiasVsGate_spyview(Dataset_2d_spyview):
+    def __init__(self, data_dir, filename, current_col = 4, conductance_col = 6):
+        """
+        X: bias. Y: gate.
+        Current measured by K1 and conductance by L1 (columns 4 and 6 in spyview by default).
+        Parses the metadata txt to interpret the gate and bias amplifications.
+        All units in SI.
+        """
+        Dataset_2d_spyview.__init__(self, data_dir, filename)
+        try:
+            self.V_range = float(re.findall('[0-9]+mV/V', self.xlabel)[0][:-4]) * 1e-3
+            self.gate_amplification = float(re.findall('[0-9]+V/V', self.ylabel)[0][:-3]) * 1e-3
+        except:
+            print('Check metadata: bias [XX]mV/V and gate [YY]V/V?')
+        
+        self.Vbias = self.x * 1e-3 * self.V_range # mV -> V then Vsource amp factor
+        self.Vg = self.y * self.gate_amplification # assuming gates are always xx V/V
+        self.current = self.z_list[current_col - 4]
+        self.g = self.z_list[conductance_col - 4]
+        
+    def correct_bias(self, Rline):
+        """
+        Needs Rline in Ohm. Creates self.Vbias_cor
+        """
+        self.Vbias_cor = np.empty_like(self.g)
+        for k in range(len(self.Vg)):
+            self.Vbias_cor[k, :] = self.Vbias - self.current[k, :] * Rline
+        
+    def quick_plot_g(self, x_unit = 'mV', bias_cor = True):
+        """
+        x_unit must be in {'V', 'mV', 'uV'}
+        Returns the plotting objects so that you can e.g. mesh.set_norm() later
+        """
+        unit_mapping = {'V': 1, 'mV': 1e3, 'uV': 1e6}
+        x_factor = unit_mapping[x_unit]
+        
+        fig, ax = plt.subplots()
+        if bias_cor:
+            mesh = ax.pcolormesh(self.Vbias_cor * x_factor, self.Vg, self.g)
+        else:
+            mesh = ax.pcolormesh(self.Vbias * x_factor, self.Vg, self.g)
+        ax.set_xlabel(f'Bias ({x_unit})')
+        ax.set_ylabel('Gate (V)')
+        ax.set_title(self.filename)
+        fig.colorbar(mesh, ax=ax, label= 'd$I$/d$V$ ($2e^2/h$)')
+        
+        return fig, ax, mesh
+
 
 """
 ---------------------------------------------------------------------------------------------------
