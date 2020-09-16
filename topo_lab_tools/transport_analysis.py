@@ -156,17 +156,17 @@ class Dataset_3T():
         mesh.set_norm(norm)
         cbar.update_normal(mesh)
         
-    def correct_dcac(self, Rline):
+    def correct_dcac(self, RL, RR, RS):
         """
-        Rline is series R (Ohm) on ONE fridge line.
+        RL, RR, RS are the total resistances in Ohm on the left, right and middle side, respectively.
         Creates self.VR_corr, self.VL_corr, self.gLL_VL_corr etc etc.
         """
         # correcting DC bias 
-        self.VR_corr = (self.VR - self.IR_VR * Rline - (self.IL_VR + self.IR_VR) * Rline)
-        self.VL_corr = (self.VL - self.IL_VL * Rline - (self.IL_VL + self.IR_VL) * Rline)
+        self.VR_corr = (self.VR - self.IR_VR * RR - (self.IL_VR + self.IR_VR) * RS)
+        self.VL_corr = (self.VL - self.IL_VL * RL - (self.IL_VL + self.IR_VL) * RS)
 
         # correcting AC signal
-        R_mat = Rline * np.array([[2, 1], [1, 2]])
+        R_mat = np.array([[RL+RS, RS], [RS, RR+RS]])
         self.gLL_VL_corr, self.gLR_VL_corr, self.gRL_VL_corr, self.gRR_VL_corr = [np.empty_like(self.gLL_VL) for k in range(4)]
         self.gLL_VR_corr, self.gLR_VR_corr, self.gRL_VR_corr, self.gRR_VR_corr = [np.empty_like(self.gLL_VL) for k in range(4)]
         for k_row in range(self.gLL_VL.shape[0]):
