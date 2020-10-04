@@ -2,34 +2,34 @@ import os, re
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
-from qcodes import load_by_run_spec, initialise_or_create_database_at
-import qcodes as qc
 import pandas as pd
 import copy
-import matplotlib
-matplotlib.rcParams["text.usetex"] = False
-#matplotlib.rcParams["font.family"] = "Helvetica"
-matplotlib.rcParams["text.latex.preamble"] = "\\usepackage{amsmath}"
-matplotlib.rcParams["figure.max_open_warning"]
-matplotlib.rcParams["axes.labelsize"] = 16
-matplotlib.rcParams["xtick.labelsize"] = 16
-matplotlib.rcParams["ytick.labelsize"] = 16
-matplotlib.rcParams["font.size"] = 15
-matplotlib.rcParams["figure.figsize"] = [12,5]
-matplotlib.rcParams["ytick.major.size"] = 8
-matplotlib.rcParams["ytick.major.width"] = 1.5
-matplotlib.rcParams["ytick.minor.size"] = 4
-matplotlib.rcParams["ytick.minor.width"] = 1
-matplotlib.rcParams["ytick.direction"] = "in"
-matplotlib.rcParams["xtick.major.size"] = 8
-matplotlib.rcParams["xtick.major.width"] = 1.5
-matplotlib.rcParams["xtick.direction"] = "in"
-matplotlib.rcParams["xtick.minor.size"] = 4
-matplotlib.rcParams["xtick.minor.width"] = 1
-matplotlib.rcParams["savefig.bbox"] = "tight"
-matplotlib.rcParams["savefig.pad_inches"] = 0.05
-matplotlib.rcParams["axes.linewidth"] = 1.5
-matplotlib.rcParams["legend.fontsize"] = 14
+from qcodes import load_by_run_spec, initialise_or_create_database_at, load_by_id
+import qcodes as qc
+
+mpl.rcParams["text.usetex"] = False
+#mpl.rcParams["font.family"] = "Helvetica"
+mpl.rcParams["text.latex.preamble"] = "\\usepackage{amsmath}"
+mpl.rcParams["figure.max_open_warning"]
+mpl.rcParams["axes.labelsize"] = 16
+mpl.rcParams["xtick.labelsize"] = 16
+mpl.rcParams["ytick.labelsize"] = 16
+mpl.rcParams["font.size"] = 15
+mpl.rcParams["figure.figsize"] = [12,5]
+mpl.rcParams["ytick.major.size"] = 8
+mpl.rcParams["ytick.major.width"] = 1.5
+mpl.rcParams["ytick.minor.size"] = 4
+mpl.rcParams["ytick.minor.width"] = 1
+mpl.rcParams["ytick.direction"] = "in"
+mpl.rcParams["xtick.major.size"] = 8
+mpl.rcParams["xtick.major.width"] = 1.5
+mpl.rcParams["xtick.direction"] = "in"
+mpl.rcParams["xtick.minor.size"] = 4
+mpl.rcParams["xtick.minor.width"] = 1
+mpl.rcParams["savefig.bbox"] = "tight"
+mpl.rcParams["savefig.pad_inches"] = 0.05
+mpl.rcParams["axes.linewidth"] = 1.5
+mpl.rcParams["legend.fontsize"] = 14
 
 
 """
@@ -74,10 +74,12 @@ def batch_guess_2D_dims(inner_axis, outer_axis, data_2d_list):
 
 
 class Dataset_3T():
+    """
+    A data-storage-format-agnostic class storing and performing most common operations
+    on full conductance matrix measurements.
+    """
     def __init__(self, VL, VR, Is_VL, Is_VR, gs_VL, gs_VR, y_param, y_param_label):
-        """
-        A data-storage-format-agnostic class storing and performing most common operations
-        on full conductance matrix measurements.
+        """    
         Inputs are np.array's in proper shapes or lists of them.
         VL, VR: DC bias on left and right.
         Is_VL, Is_VR: each contains IL and IR wrt respective bias sweeps.
@@ -115,28 +117,28 @@ class Dataset_3T():
             VL, VR = self.VL, self.VR
 
         ax = self.axes[0,0]
-        mesh = ax.pcolormesh(VL*1e3, self.y_param, gLL*12906, cmap='magma')
+        mesh = ax.pcolormesh(VL*1e3, self.y_param, gLL*12906.4, cmap='magma')
         ax.set_xlabel('$V_L$ (mV)')
         ax.set_title('$g_{LL}$')
         cbar = _make_cbar(ax, mesh, '$g_{LL}$ ($G_0$)')
         self.heatmaps['LL'] = mesh, cbar
 
         ax = self.axes[0,1]
-        mesh = ax.pcolormesh(VR*1e3, self.y_param, gLR*12906, cmap='RdBu_r')
+        mesh = ax.pcolormesh(VR*1e3, self.y_param, gLR*12906.4*1e3, cmap='RdBu_r')
         ax.set_xlabel('$V_R$ (mV)')
         ax.set_title('$g_{LR}$')
-        cbar = _make_cbar(ax, mesh, '$g_{LR}$ ($G_0$)')
+        cbar = _make_cbar(ax, mesh, '$g_{LR}$ ($10^{3} G_0$)')
         self.heatmaps['LR'] = mesh, cbar
 
         ax = self.axes[1,0]
-        mesh = ax.pcolormesh(VL*1e3, self.y_param, gRL*12906, cmap='RdBu_r')
+        mesh = ax.pcolormesh(VL*1e3, self.y_param, gRL*12906.4*1e3, cmap='RdBu_r')
         ax.set_xlabel('$V_L$ (mV)')
         ax.set_title('$g_{RL}$')
-        cbar = _make_cbar(ax, mesh, '$g_{RL}$ ($G_0$)')
+        cbar = _make_cbar(ax, mesh, '$g_{RL}$ ($10^{3} G_0$)')
         self.heatmaps['RL'] = mesh, cbar
 
         ax = self.axes[1,1]
-        mesh = ax.pcolormesh(VR*1e3, self.y_param, gRR*12906, cmap='magma')
+        mesh = ax.pcolormesh(VR*1e3, self.y_param, gRR*12906.4, cmap='magma')
         ax.set_xlabel('$V_R$ (mV)')
         ax.set_title('$g_{RR}$')
         cbar = _make_cbar(ax, mesh, '$g_{RR}$ ($G_0$)')
@@ -146,12 +148,16 @@ class Dataset_3T():
             ax.set_ylabel(self.y_param_label)
         self.fig.tight_layout()
         
-    def update_minmax(self, label, vmin, vmax):
+    def update_minmax(self, label, vmin, vmax, gamma=None):
         """
         label: in {'LL', 'LR', 'RL', 'RR'}
         Updates the corresponding panel directly
         """
-        norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        if gamma == None:
+            norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        else:
+            assert gamma > 0, 'Check input: gamma needs to be a positive number'
+            norm = mpl.colors.PowerNorm(gamma, vmin=vmin, vmax=vmax)
         mesh, cbar = self.heatmaps[label]
         mesh.set_norm(norm)
         cbar.update_normal(mesh)
