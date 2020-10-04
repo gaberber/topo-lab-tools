@@ -268,26 +268,24 @@ class Dataset_2d_spyview(Dataset_2d):
         
         Dataset_2d.create_labels(self, metadata[3].strip(), metadata[7].strip(), col_labels)
 
-
-def plot_spyview_columns(dataset, columns_list):
-    """
-    dataset: Dataset_2d_spyview, which can in fact be 1D
-    columns_list: a list of columns (as shown in Spyview, so starting from 4) to plot
-    Returns the fig and axs created here.
-    """
-    fig, axs = plt.subplots(len(columns_list), 1, figsize=(6, 2*len(columns_list)))
-    for ax, col in zip(axs, columns_list):
-        if dataset.dims[0] == 1:
-            ax.plot(dataset.x, dataset.z_list[col - 4][0,:])
-            ax.set_ylabel(dataset.zlabel_list[col - 4])
-            ax.set_xlabel(dataset.xlabel)
-        else:
-            mesh = ax.pcolormesh(dataset.x, dataset.y, dataset.z_list[col-4], cmap='viridis')
-            ax.set_ylabel(dataset.ylabel)
-            cbar = plt.colorbar(mesh, ax = ax, label=dataset.zlabel_list[col - 4])
-    axs[0].set_title(dataset.filename)
-    fig.tight_layout()
-    return fig, axs
+    def plot_columns(self, columns_list):
+        """
+        columns_list: a list of columns (as shown in Spyview, so starting from 4) to plot
+        Returns the fig and axs created here.
+        """
+        fig, axs = plt.subplots(len(columns_list), 1, figsize=(6, 2*len(columns_list)))
+        for ax, col in zip(axs, columns_list):
+            if self.dims[0] == 1:
+                ax.plot(self.x, self.z_list[col - 4][0,:])
+                ax.set_ylabel(self.zlabel_list[col - 4])
+                ax.set_xlabel(self.xlabel)
+            else:
+                mesh = ax.pcolormesh(self.x, self.y, self.z_list[col-4], cmap='viridis')
+                ax.set_ylabel(self.ylabel)
+                cbar = plt.colorbar(mesh, ax = ax, label=self.zlabel_list[col - 4])
+        axs[0].set_title(self.filename)
+        fig.tight_layout()
+        return fig, axs
 
 
 class Dataset_BiasVsGate_spyview(Dataset_2d_spyview):
