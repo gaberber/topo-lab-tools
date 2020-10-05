@@ -662,4 +662,158 @@ class Dataset_qcodes():
         self.instruments = self.dataset.snapshot['station']["instruments"].keys()
 
             
+class Dataset_qcodes_basic():
+    """
+    A qcodes dataset class that does the absolute minimum: loads DB, extracts data.
+    Intended to spare you from copy pasting cells in Jupyter 
+    and should not be broken by however weird measurements.
+    Properties:
+        dataset (load_by_id)
+        dF (pandas.DataFrame)
+        run_id; exp_name; sample_name; instruments
+        setpoint_labels; data_labels
+        params: all qcodes Parameters
+        Each Parameter gets its own np.array under the same name
+    """
+    def __init__(self, data_dir, db_filename, run_id):
+        qc.config["core"]["db_location"] = os.path.join(data_dir, db_filename)
+        self.dataset = load_by_id(run_id)
+        self.dF = self.dataset.get_data_as_pandas_dataframe()
+        self.run_id = run_id
+        self.exp_name = self.dataset.exp_name
+        self.sample_name = self.dataset.sample_name
+        self.data_labels = list(self.dF.keys())
+        self.setpoint_labels = [p.name for p in self.dataset.get_parameters() \
+                                if len(p.depends_on) == 0]
+        self.params = self.dataset.get_parameters()
+        self.instruments = list(self.dataset.snapshot['station']["instruments"].keys())
+        for label in self.setpoint_labels + self.data_labels:
+            redund_vals = self.dataset.get_parameter_data(label)[label][label]
+            shape = (int(len(redund_vals)/len(self.data_labels)), len(self.data_labels))
+            self.__dict__[label] = redund_vals[:shape[0]*shape[1]].reshape(shape)[:,0]
+        for label in self.data_labels:
+            self.__dict__[label] = np.array(self.dF[label][label].values)
+            
+    def full_dataset_title(self):
+        return f"{self.dataset.path_to_db.split('/')[-1]} ID{self.run_id}: {self.exp_name}"
+
+
+class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
+    """
+    A qcodes dataset class that handles 2-dimensional sweeps in a grid:
+    loads DB, extracts data, 
+    finds out x and y axes, reshapes data into matrices.
+    Properties:
+        dataset (load_by_id)
+        dF (pandas.DataFrame)
+        run_id; exp_name; sample_name; instruments
+        setpoint_labels; data_labels
+        params: all qcodes Parameters
+        Each Parameter gets its own np.array under the same name
+        x; y; xlabel; ylabel; x_param; y_param
+        z_list; zlabel_list; zlabel_dict
+        Plotting object dicts: figs; axs; meshes; cbars
+    """
+    def __init__(self, data_dir, db_filename, run_id):
+        Dataset_qcodes_basic.__init__(self, data_dir, db_filename, run_id)
+        if len(self.setpoint_labels) != 2:
+            print('WARNING: number of independent parameters is not 2!')
         
+        def _look_for_param(param_name):
+            for p in self.params:
+                if p.name == param_name:
+                    return p
+                
+        y_init, x_init = [self.__dict__[label] for label in self.setpoint_labels]
+        self.y_param, self.x_param = [_look_for_param(label) \
+                                      for label in self.setpoint_labels]
+        if y_init[0] != y_init[1]: # makes sure x is the inner/fast axis and y outer/slow
+            y_init, x_init = x_init, y_init
+            self.y_param, self.x_param = self.x_param, self.y_param
+            
+        z_list_init = [self.__dict__[label] for label in self.data_labels]
+        Dataset_2d.__init__(self, x_init, y_init, z_list_init)
+        for kk, label in enumerate(self.data_labels):
+            self.__dict__[label] = self.z_list[kk]
+        
+        self.zlabel_list = []
+        self.zlabel_dict = {}
+        for label in self.data_labels:
+            z_param = _look_for_param(label)
+            zlabel = f'{z_param.name} ({z_param.unit})'
+            self.zlabel_list.append(zlabel)
+            self.zlabel_dict[label] = zlabel
+        self.xlabel = f'{self.x_param.name} ({self.x_param.unit})'
+        self.ylabel = f'{self.y_param.name} ({self.y_param.unit})'
+        
+        self.figs, self.axs, self.meshes, self.cbars = {}, {}, {}, {}
+        
+    def _store_plotting_objects(self, param_name, fig, ax, mesh, cbar):
+        self.figs[param_name] = fig
+        self.axs[param_name] = ax
+        self.meshes[param_name] = mesh
+        self.cbars[param_name] = cbar
+        
+    def imshow_param(self, param_name):
+        """
+        plt.pcolormesh a measured parameter, without x and y
+        Useful when plot_by_id cannot handle non-standard indices
+        """
+        fig, ax = plt.subplots()
+        mesh = ax.imshow(self.__dict__[param_name], cmap='viridis')
+        cbar = plt.colorbar(mesh, ax=ax, label=self.zlabel_dict[param_name])
+        self._store_plotting_objects(param_name, fig, ax, mesh, cbar)
+        
+    def plot_param(self, param_name, fig=None, ax=None, cmap='viridis', \
+                   vmin=None, vmax=None, gamma=None, sym_cmap=False, \
+                   scale_x=1, scale_y=1, scale_z=1):
+        """
+        Plots the specified parameter name with pcolormesh.
+        fig, ax can be either specified or created if not.
+        Supports colormap, vmin, vmax, power-law gamma specs.
+        If sym_cmap is enabled, the colorbar will be centered at 0 with automatic vmin, vmax.
+        Plotting objects are stored in the dicts (figs, axs, meshes, cbars) of the instance
+        """
+        if fig == None:
+            fig, ax = plt.subplots()
+        else:
+            assert ax != None, 'You supplied a fig to use but no ax'
+        
+        xlabel = self.xlabel if scale_x == 1 else fr'{scale_x}$\times$'+self.xlabel
+        ylabel = self.ylabel if scale_y == 1 else fr'{scale_y}$\times$'+self.ylabel
+        zlabel = self.zlabel_dict[param_name] if scale_z == 1 else f'{scale_z}$\times$'+self.zlabel_dict[param_name]
+            
+        mesh = ax.pcolormesh(self.x*scale_x, self.y*scale_y, \
+                             self.__dict__[param_name]*scale_z, cmap=cmap)
+        cbar = plt.colorbar(mesh, ax=ax, label=zlabel)
+        
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        fig.suptitle(self.full_dataset_title(), fontsize=10)
+        
+        if sym_cmap:
+            vmax = np.abs(self.__dict__[param_name]).max()
+            vmin = -vmax
+            gamma = 1
+        if vmin != None or vmax != None or gamma != None:
+            vmin = vmin if vmin != None else self.__dict__[param_name].min()
+            vmax = vmax if vmax != None else self.__dict__[param_name].max()
+            gamma = gamma if gamma != None else 1
+            norm = mpl.colors.PowerNorm(gamma, vmin=vmin, vmax=vmax)
+            mesh.set_norm(norm)
+            cbar.update_normal(mesh)
+        
+        self._store_plotting_objects(param_name, fig, ax, mesh, cbar)
+        
+    def update_minmax(self, param_name, vmin, vmax, gamma=None):
+        """
+        Looks for the corresponding plotting objects stored in the instance
+        and updates the corresponding vmin, vmax, gamma/
+        """
+        if gamma == None:
+            norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        else:
+            # assert gamma > 0, 'Check input: gamma needs to be a positive number'
+            norm = mpl.colors.PowerNorm(gamma, vmin=vmin, vmax=vmax)
+        self.meshes[param_name].set_norm(norm)
+        self.cbars[param_name].update_normal(mesh)
