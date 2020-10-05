@@ -816,4 +816,4 @@ class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
             # assert gamma > 0, 'Check input: gamma needs to be a positive number'
             norm = mpl.colors.PowerNorm(gamma, vmin=vmin, vmax=vmax)
         self.meshes[param_name].set_norm(norm)
-        self.cbars[param_name].update_normal(mesh)
+        self.cbars[param_name].update_normal(self.meshes[param_name])
