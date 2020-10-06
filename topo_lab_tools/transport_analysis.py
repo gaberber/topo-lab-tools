@@ -81,10 +81,9 @@ class Dataset_3T():
     def __init__(self, VL, VR, Is_VL, Is_VR, gs_VL, gs_VR, y_param, y_param_label):
         """    
         Inputs are np.array's in proper shapes or lists of them.
-        VL, VR: DC bias on left and right.
-        Is_VL, Is_VR: each contains IL and IR wrt respective bias sweeps.
-        gs_VL, gs_VR: each contains in order: gLL, gLR, gRL, gRR wrt respective biases.
-        All units in SI.
+        VL, VR: DC bias on left and right. Unit: V
+        Is_VL, Is_VR: each contains IL and IR wrt respective bias sweeps. Unit: A
+        gs_VL, gs_VR: each contains in order: gLL, gLR, gRL, gRR wrt respective biases. Unit: G0
         y_param, y_param_label: meaning-agnostic y axis.
         Unpacks all inputs into individual np.array's.
         """
@@ -95,7 +94,7 @@ class Dataset_3T():
         self.gLL_VR, self.gLR_VR, self.gRL_VR, self.gRR_VR = gs_VR
         self.y_param, self.y_param_label = y_param, y_param_label
         
-    def plot_cond_matrix(self, corr = False):
+    def plot_cond_matrix(self, corr = False, sym_cmap=True):
         """
         Creates a figure with four panels plotting the conductance matrix.
         Stores the fig and axes as attributes of this instance for external use.
@@ -117,28 +116,36 @@ class Dataset_3T():
             VL, VR = self.VL, self.VR
 
         ax = self.axes[0,0]
-        mesh = ax.pcolormesh(VL*1e3, self.y_param, gLL*12906.4, cmap='magma')
+        mesh = ax.pcolormesh(VL*1e3, self.y_param, gLL, cmap='magma')
         ax.set_xlabel('$V_L$ (mV)')
         ax.set_title('$g_{LL}$')
         cbar = _make_cbar(ax, mesh, '$g_{LL}$ ($G_0$)')
         self.heatmaps['LL'] = mesh, cbar
 
         ax = self.axes[0,1]
-        mesh = ax.pcolormesh(VR*1e3, self.y_param, gLR*12906.4*1e3, cmap='RdBu_r')
+        mesh = ax.pcolormesh(VR*1e3, self.y_param, gLR*1e3, cmap='RdBu_r')
         ax.set_xlabel('$V_R$ (mV)')
         ax.set_title('$g_{LR}$')
-        cbar = _make_cbar(ax, mesh, '$g_{LR}$ ($10^{3} G_0$)')
+        cbar = _make_cbar(ax, mesh, '$g_{LR}$ ($10^{-3} G_0$)')
         self.heatmaps['LR'] = mesh, cbar
+        if sym_cmap:
+            vmax = np.abs(gLR*1e3).max()
+            vmin = -vmax
+            self.update_minmax('LR', vmin, vmax)
 
         ax = self.axes[1,0]
-        mesh = ax.pcolormesh(VL*1e3, self.y_param, gRL*12906.4*1e3, cmap='RdBu_r')
+        mesh = ax.pcolormesh(VL*1e3, self.y_param, gRL*1e3, cmap='RdBu_r')
         ax.set_xlabel('$V_L$ (mV)')
         ax.set_title('$g_{RL}$')
-        cbar = _make_cbar(ax, mesh, '$g_{RL}$ ($10^{3} G_0$)')
+        cbar = _make_cbar(ax, mesh, '$g_{RL}$ ($10^{-3} G_0$)')
         self.heatmaps['RL'] = mesh, cbar
+        if sym_cmap:
+            vmax = np.abs(gRL*1e3).max()
+            vmin = -vmax
+            self.update_minmax('RL', vmin, vmax)
 
         ax = self.axes[1,1]
-        mesh = ax.pcolormesh(VR*1e3, self.y_param, gRR*12906.4, cmap='magma')
+        mesh = ax.pcolormesh(VR*1e3, self.y_param, gRR, cmap='magma')
         ax.set_xlabel('$V_R$ (mV)')
         ax.set_title('$g_{RR}$')
         cbar = _make_cbar(ax, mesh, '$g_{RR}$ ($G_0$)')
@@ -172,22 +179,23 @@ class Dataset_3T():
         self.VL_corr = (self.VL - self.IL_VL * RL - (self.IL_VL + self.IR_VL) * RS)
 
         # correcting AC signal
+        G0=7.748091191125409e-05
         R_mat = np.array([[RL+RS, RS], [RS, RR+RS]])
         self.gLL_VL_corr, self.gLR_VL_corr, self.gRL_VL_corr, self.gRR_VL_corr = [np.empty_like(self.gLL_VL) for k in range(4)]
         self.gLL_VR_corr, self.gLR_VR_corr, self.gRL_VR_corr, self.gRR_VR_corr = [np.empty_like(self.gLL_VL) for k in range(4)]
         for k_row in range(self.gLL_VL.shape[0]):
             for k_col in range(self.gLL_VL.shape[1]):
-                gmat_VL = np.array([[self.gLL_VL[k_row, k_col], self.gLR_VL[k_row, k_col]], \
+                Gmat_VL = G0 * np.array([[self.gLL_VL[k_row, k_col], self.gLR_VL[k_row, k_col]], \
                                   [self.gRL_VL[k_row, k_col], self.gRR_VL[k_row, k_col]]])
-                V_jacobian_VL = np.eye(2) - R_mat.dot(gmat_VL)
-                gmat_VL_corr = gmat_VL.dot(np.linalg.inv(V_jacobian_VL))
-                self.gLL_VL_corr[k_row, k_col], self.gLR_VL_corr[k_row, k_col], self.gRL_VL_corr[k_row, k_col], self.gRR_VL_corr[k_row, k_col] = gmat_VL_corr.flatten()
+                V_jacobian_VL = np.eye(2) - R_mat.dot(Gmat_VL)
+                Gmat_VL_corr = Gmat_VL.dot(np.linalg.inv(V_jacobian_VL))
+                self.gLL_VL_corr[k_row, k_col], self.gLR_VL_corr[k_row, k_col], self.gRL_VL_corr[k_row, k_col], self.gRR_VL_corr[k_row, k_col] = Gmat_VL_corr.flatten()/G0
                 
-                gmat_VR = np.array([[self.gLL_VR[k_row, k_col], self.gLR_VR[k_row, k_col]], \
+                Gmat_VR = G0 * np.array([[self.gLL_VR[k_row, k_col], self.gLR_VR[k_row, k_col]], \
                                   [self.gRL_VR[k_row, k_col], self.gRR_VR[k_row, k_col]]])
-                V_jacobian_VR = np.eye(2) - R_mat.dot(gmat_VR)
-                gmat_VR_corr = gmat_VR.dot(np.linalg.inv(V_jacobian_VR))
-                self.gLL_VR_corr[k_row, k_col], self.gLR_VR_corr[k_row, k_col], self.gRL_VR_corr[k_row, k_col], self.gRR_VR_corr[k_row, k_col] = gmat_VR_corr.flatten()
+                V_jacobian_VR = np.eye(2) - R_mat.dot(Gmat_VR)
+                Gmat_VR_corr = Gmat_VR.dot(np.linalg.inv(V_jacobian_VR))
+                self.gLL_VR_corr[k_row, k_col], self.gLR_VR_corr[k_row, k_col], self.gRL_VR_corr[k_row, k_col], self.gRR_VR_corr[k_row, k_col] = Gmat_VR_corr.flatten()/G0
 
 
 """
@@ -822,3 +830,76 @@ class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
             norm = mpl.colors.PowerNorm(gamma, vmin=vmin, vmax=vmax)
         self.meshes[param_name].set_norm(norm)
         self.cbars[param_name].update_normal(self.meshes[param_name])
+
+
+class Dataset_3T_qcodes(Dataset_3T, Dataset_2d_qcodes):
+    """
+    A 3-terminal data class that interfaces with qcodes DB
+    Assumption of measurement: fast axis is V_bias twice, first on the left and then on the right
+    Slow axis is some arbitrary parameter.
+    Voltage in V, current in A, conductance in G0.
+    """
+    def __init__(self, data_dir, db_filename, run_id, gain=1e7, fake_sim_meas = True):
+        """
+        Can only handle two sides having the same gain for now.
+        fake_sim_meas option takes the (averaged) center column of the measured half and use it as 
+        an estimation of the unmeasured half (when the corresponding lockin excitation is actually off).
+
+        """
+        Dataset_2d_qcodes.__init__(self, data_dir, db_filename, run_id)
+        self.IL, self.IR = self.__dict__['Current_L']*1e-9, self.__dict__['Current_L']*1e-9
+        self.zlabel_dict['IL'] = '$I_L$ (A)'
+        self.zlabel_dict['IR'] = '$I_R$ (A)'
+        
+        self.IL_VL, self.IL_VR = self._split_gXX_in_halves(self.IL)
+        self.IR_VL, self.IR_VR = self._split_gXX_in_halves(self.IR)
+        self.zlabel_dict['IL_VL'] = '$I_L$ (A)'
+        self.zlabel_dict['IL_VR'] = '$I_L$ (A)'
+        self.zlabel_dict['IR_VL'] = '$I_R$ (A)'
+        self.zlabel_dict['IR_VR'] = '$I_R$ (A)'
+        
+        for subscript in ['LL', 'LR', 'RL', 'RR']:
+            self.__dict__[f'g{subscript}'] = self.__dict__[f'Conductance_{subscript}']
+            self.zlabel_dict[f'g{subscript}'] = f'$g_{{{subscript}}}$ ($2e^2/h$)'
+            
+            self.__dict__[f'g{subscript}_VL'], self.__dict__[f'g{subscript}_VR'] = \
+            self._split_gXX_in_halves(self.__dict__[f'g{subscript}'])
+            self.zlabel_dict[f'g{subscript}_VL'] = f'$g_{{{subscript}}}$ ($2e^2/h$)'
+            self.zlabel_dict[f'g{subscript}_VR'] = f'$g_{{{subscript}}}$ ($2e^2/h$)'
+            
+        if fake_sim_meas:
+            self.gLL_VR = self._fake_useless_half(self.gLL_VL)
+            self.gLR_VL = self._fake_useless_half(self.gLR_VR)
+            self.gRL_VR = self._fake_useless_half(self.gRL_VL)
+            self.gRR_VL = self._fake_useless_half(self.gRR_VR)
+        
+        Is_VL = [self.IL_VL, self.IR_VL]
+        Is_VR = [self.IL_VR, self.IR_VR]
+        gs_VL = [self.gLL_VL, self.gLR_VL, self.gRL_VL, self.gRR_VL]
+        gs_VR = [self.gLL_VR, self.gLR_VR, self.gRL_VR, self.gRR_VR]
+        
+        ncols = int(len(self.x)/2)
+        if len(self.x) != ncols*2:
+            print('WARNING: length of bias vector is an odd number.')
+        Dataset_3T.__init__(self, self.x[:ncols], self.x[ncols:], Is_VL, Is_VR, gs_VL, gs_VR, self.y, self.ylabel)
+        
+    def _split_gXX_in_halves(self, gXX):
+        ncols = int(gXX.shape[1] / 2)
+        return gXX[:, :ncols], gXX[:, ncols:]
+    
+    def _fake_useless_half(self, gXX, avg_width = 5):
+        ncols = gXX.shape[1]
+        gXX_middle_mean = gXX[:, int(ncols*0.5-avg_width*0.5):int(ncols*0.5+avg_width*0.5)].mean(axis=1)
+        return gXX_middle_mean[:,np.newaxis].dot(np.ones((1,ncols)))
+    
+    def update_minmax(self, label, vmin, vmax, gamma=None):
+        """
+        label can either be in {'LL', 'LR', 'RL', 'RR'} or a param_name
+        It calls either the update_minmax in Dataset_3T or Dataset_2d_qcodes accordingly
+        """
+        if label in {'LL', 'LR', 'RL', 'RR'}:
+            Dataset_3T.update_minmax(self, label, vmin, vmax, gamma)
+        elif label in self.__dict__:
+            Dataset_2d_qcodes.update_minmax(self, label, vmin, vmax, gamma)
+        else:
+            print('label needs to be either a conductance matrix term such as LL or the name of a property variable')
