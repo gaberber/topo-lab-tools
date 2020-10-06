@@ -882,6 +882,7 @@ class Dataset_3T_qcodes(Dataset_3T, Dataset_2d_qcodes):
         if len(self.x) != ncols*2:
             print('WARNING: length of bias vector is an odd number.')
         Dataset_3T.__init__(self, self.x[:ncols], self.x[ncols:], Is_VL, Is_VR, gs_VL, gs_VR, self.y, self.ylabel)
+        self.x = self.VL # beware this happened
         
     def _split_gXX_in_halves(self, gXX):
         ncols = int(gXX.shape[1] / 2)
