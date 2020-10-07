@@ -790,14 +790,14 @@ class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
         xlabel = self.xlabel if scale_x == 1 else fr'{scale_x}$\times$'+self.xlabel
         ylabel = self.ylabel if scale_y == 1 else fr'{scale_y}$\times$'+self.ylabel
         try:
-            zlabel = self.zlabel_dict[param_name] if scale_z == 1 else f'{scale_z}$\times$'+self.zlabel_dict[param_name]
+            zlabel = self.zlabel_dict[param_name] if scale_z == 1 else fr'{scale_z}$\times$'+self.zlabel_dict[param_name]
         except KeyError:
             zlabel = 'No label'
             print('WARNING: You might be plotting a processed value, not measured by qcodes.')
             print('Add a label to it using d.zlabel_dict[var_name] = "var (a.u.)"')
             
-        mesh = ax.pcolormesh(self.x*scale_x, self.y*scale_y, \
-                             self.__dict__[param_name]*scale_z, cmap=cmap)
+        x, y, z = self.x * scale_x, self.y * scale_y, self.__dict__[param_name] * scale_z
+        mesh = ax.pcolormesh(x, y, z, cmap=cmap)
         cbar = plt.colorbar(mesh, ax=ax, label=zlabel)
         
         ax.set_xlabel(xlabel)
@@ -805,12 +805,11 @@ class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
         fig.suptitle(self.full_dataset_title(), fontsize=10)
         
         if sym_cmap:
-            vmax = np.abs(self.__dict__[param_name]).max()
+            vmax = np.abs(z).max()
             vmin = -vmax
-            gamma = 1
-        if vmin != None or vmax != None or gamma != None:
-            vmin = vmin if vmin != None else self.__dict__[param_name].min()
-            vmax = vmax if vmax != None else self.__dict__[param_name].max()
+        if vmin != None or vmax != None or gamma != None or sym_cmap:
+            vmin = vmin if vmin != None else z.min()
+            vmax = vmax if vmax != None else z.max()
             gamma = gamma if gamma != None else 1
             norm = mpl.colors.PowerNorm(gamma, vmin=vmin, vmax=vmax)
             mesh.set_norm(norm)
