@@ -695,6 +695,7 @@ class Dataset_qcodes_basic():
                                 if len(p.depends_on) == 0]
         self.params = self.dataset.get_parameters()
         self.instruments = list(self.dataset.snapshot['station']["instruments"].keys())
+        self.full_dataset_title = f"{self.dataset.path_to_db.split('/')[-1]} ID{self.run_id}: {self.exp_name}"
         for label in self.setpoint_labels + self.data_labels:
             redund_vals = self.dataset.get_parameter_data(label)[label][label]
             shape = (int(len(redund_vals)/len(self.data_labels)), len(self.data_labels))
@@ -702,8 +703,6 @@ class Dataset_qcodes_basic():
         for label in self.data_labels:
             self.__dict__[label] = np.array(self.dF[label][label].values)
             
-    def full_dataset_title(self):
-        return f"{self.dataset.path_to_db.split('/')[-1]} ID{self.run_id}: {self.exp_name}"
 
 
 class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
