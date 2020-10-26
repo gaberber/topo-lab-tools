@@ -695,7 +695,7 @@ class Dataset_qcodes_basic():
                                 if len(p.depends_on) == 0]
         self.params = self.dataset.get_parameters()
         self.instruments = list(self.dataset.snapshot['station']["instruments"].keys())
-        self.full_dataset_title = f"{self.dataset.path_to_db.split('/')[-1]} ID{self.run_id}: {self.exp_name}"
+        self.full_dataset_title = f"{self.dataset.path_to_db.split(os.path.sep)[-1]} ID{self.run_id}: {self.exp_name}"
         for label in self.setpoint_labels + self.data_labels:
             redund_vals = self.dataset.get_parameter_data(label)[label][label]
             shape = (int(len(redund_vals)/len(self.data_labels)), len(self.data_labels))
@@ -801,7 +801,7 @@ class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
         
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        fig.suptitle(self.full_dataset_title(), fontsize=10)
+        fig.suptitle(self.full_dataset_title, fontsize=10)
         
         if sym_cmap:
             vmax = np.abs(z).max()
