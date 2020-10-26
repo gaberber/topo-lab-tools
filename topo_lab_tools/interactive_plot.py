@@ -29,7 +29,7 @@ def plot_colormap_interactive(x, y, z, xlabel=None, ylabel=None, zlabel=None, ad
 
     slider_min = Slider(ax_min, 'Min', np.min(z), np.max(z), valinit=np.min(z))
     slider_max = Slider(ax_max, 'Max', np.min(z), np.max(z), valinit=np.max(z))
-    slider_gamma = Slider(ax_gamma, '$\gamma$', 0, 3, 1)
+    slider_gamma = Slider(ax_gamma, r'$\gamma$', 0, 3, 1)
 
     def _update(val):
         val_min = slider_min.val
