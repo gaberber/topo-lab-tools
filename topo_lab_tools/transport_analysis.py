@@ -7,29 +7,30 @@ import copy
 from qcodes import load_by_run_spec, initialise_or_create_database_at, load_by_id
 import qcodes as qc
 
-mpl.rcParams["text.usetex"] = False
-#mpl.rcParams["font.family"] = "Helvetica"
-mpl.rcParams["text.latex.preamble"] = "\\usepackage{amsmath}"
-mpl.rcParams["figure.max_open_warning"]
-mpl.rcParams["axes.labelsize"] = 16
-mpl.rcParams["xtick.labelsize"] = 16
-mpl.rcParams["ytick.labelsize"] = 16
-mpl.rcParams["font.size"] = 15
-mpl.rcParams["figure.figsize"] = [12,5]
-mpl.rcParams["ytick.major.size"] = 8
-mpl.rcParams["ytick.major.width"] = 1.5
-mpl.rcParams["ytick.minor.size"] = 4
-mpl.rcParams["ytick.minor.width"] = 1
-mpl.rcParams["ytick.direction"] = "in"
-mpl.rcParams["xtick.major.size"] = 8
-mpl.rcParams["xtick.major.width"] = 1.5
-mpl.rcParams["xtick.direction"] = "in"
-mpl.rcParams["xtick.minor.size"] = 4
-mpl.rcParams["xtick.minor.width"] = 1
-mpl.rcParams["savefig.bbox"] = "tight"
-mpl.rcParams["savefig.pad_inches"] = 0.05
-mpl.rcParams["axes.linewidth"] = 1.5
-mpl.rcParams["legend.fontsize"] = 14
+def customize_mpl():
+    mpl.rcParams["text.usetex"] = False
+    #mpl.rcParams["font.family"] = "Helvetica"
+    mpl.rcParams["text.latex.preamble"] = "\\usepackage{amsmath}"
+    mpl.rcParams["figure.max_open_warning"]
+    mpl.rcParams["axes.labelsize"] = 16
+    mpl.rcParams["xtick.labelsize"] = 16
+    mpl.rcParams["ytick.labelsize"] = 16
+    mpl.rcParams["font.size"] = 15
+    mpl.rcParams["figure.figsize"] = [12,5]
+    mpl.rcParams["ytick.major.size"] = 8
+    mpl.rcParams["ytick.major.width"] = 1.5
+    mpl.rcParams["ytick.minor.size"] = 4
+    mpl.rcParams["ytick.minor.width"] = 1
+    mpl.rcParams["ytick.direction"] = "in"
+    mpl.rcParams["xtick.major.size"] = 8
+    mpl.rcParams["xtick.major.width"] = 1.5
+    mpl.rcParams["xtick.direction"] = "in"
+    mpl.rcParams["xtick.minor.size"] = 4
+    mpl.rcParams["xtick.minor.width"] = 1
+    mpl.rcParams["savefig.bbox"] = "tight"
+    mpl.rcParams["savefig.pad_inches"] = 0.05
+    mpl.rcParams["axes.linewidth"] = 1.5
+    mpl.rcParams["legend.fontsize"] = 14
 
 
 """
