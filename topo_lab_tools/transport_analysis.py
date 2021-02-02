@@ -787,10 +787,37 @@ class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
         else:
             assert ax != None, 'You supplied a fig to use but no ax'
         
-        xlabel = self.xlabel if scale_x == 1 else fr'{scale_x}$\times$'+self.xlabel
-        ylabel = self.ylabel if scale_y == 1 else fr'{scale_y}$\times$'+self.ylabel
+        def process_unit(label, scale):
+            """
+            If label takes the form of 'name (unit)' and scale is 10^{3N}:
+            append T/G/M/k/m/mu/n/p/f/a to in front of unit if appropriate
+            Otherwise append the scale to the begining of the label
+            """
+            if scale == 1:
+                return label
+            else:
+                prefixes = {
+                    1e-12: 'T',
+                    1e-9: 'G', 
+                    1e-6: 'M',
+                    1e-3: 'k', 
+                    1e3: 'm',
+                    1e6: r'$\mu$',
+                    1e9: 'n',
+                    1e12: 'p',
+                    1e15: 'f',
+                    1e18: 'a'
+                }
+                if '(' in label and ')' in label and scale in prefixes.keys():
+                    ls = label.split('(')
+                    return ls[0] + '(' + prefixes[scale] + ls[1]
+                else:
+                    return scale + fr'$\times$'+label
+
+        xlabel = process_unit(self.xlabel, scale_x)
+        ylabel = process_unit(self.ylabel, scale_y)
         try:
-            zlabel = self.zlabel_dict[param_name] if scale_z == 1 else fr'{scale_z}$\times$'+self.zlabel_dict[param_name]
+            zlabel = process_unit(self.zlabel_dict[param_name], scale_z)
         except KeyError:
             zlabel = 'No label'
             print('WARNING: You might be plotting a processed value, not measured by qcodes.')
