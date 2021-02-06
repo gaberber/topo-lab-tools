@@ -695,12 +695,14 @@ class Dataset_qcodes_basic():
         self.exp_name = self.dataset.exp_name
         self.sample_name = self.dataset.sample_name
         self.data_labels = list(self.dF.keys())
+        self.setpoint_names = [p.name for p in self.dataset.get_parameters() \
+                                if len(p.depends_on) == 0]
         self.setpoint_labels = [f'{p.name} ({p.unit})' for p in self.dataset.get_parameters() \
                                 if len(p.depends_on) == 0]
         self.params = self.dataset.get_parameters()
         self.instruments = list(self.dataset.snapshot['station']["instruments"].keys())
         self.full_dataset_title = f"{self.dataset.path_to_db.split(os.path.sep)[-1]} ID{self.run_id}: {self.exp_name}"
-        for label in self.setpoint_labels + self.data_labels:
+        for label in self.setpoint_names + self.data_labels:
             redund_vals = self.dataset.get_parameter_data(label)[label][label]
             shape = (int(len(redund_vals)/len(self.data_labels)), len(self.data_labels))
             self.__dict__[label] = redund_vals[:shape[0]*shape[1]].reshape(shape)[:,0]
@@ -710,9 +712,9 @@ class Dataset_qcodes_basic():
     def _look_for_x(self):
         if len(self.setpoint_labels) > 1:
             print('Warning: more than one setpoints found. I will make a guess which one is x.')
-        for label in self.setpoint_labels:
-            if self.__dict__[label][0] != self.__dict__[label][1]:
-                self.x = self.__dict__[label]
+        for name, label in zip(self.setpoint_names, self.setpoint_labels):
+            if self.__dict__[name][0] != self.__dict__[name][1]:
+                self.x = self.__dict__[name]
                 self.xlabel = label
 
     def preview_lines(self, params_to_view):
