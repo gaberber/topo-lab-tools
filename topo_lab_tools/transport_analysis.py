@@ -687,12 +687,15 @@ class Dataset_qcodes_basic():
     def __init__(self, data_dir, db_filename, run_id):
         qc.config["core"]["db_location"] = os.path.join(data_dir, db_filename)
         self.dataset = load_by_id(run_id)
-        self.dF = self.dataset.get_data_as_pandas_dataframe()
+        try:
+            self.dF = self.dataset.to_pandas_dataframe_dict()
+        except: # for older versions of qcodes (<0.22)
+            self.dF = self.dataset.get_data_as_pandas_dataframe()
         self.run_id = run_id
         self.exp_name = self.dataset.exp_name
         self.sample_name = self.dataset.sample_name
         self.data_labels = list(self.dF.keys())
-        self.setpoint_labels = [p.name for p in self.dataset.get_parameters() \
+        self.setpoint_labels = [f'{p.name} ({p.unit})' for p in self.dataset.get_parameters() \
                                 if len(p.depends_on) == 0]
         self.params = self.dataset.get_parameters()
         self.instruments = list(self.dataset.snapshot['station']["instruments"].keys())
@@ -704,6 +707,36 @@ class Dataset_qcodes_basic():
         for label in self.data_labels:
             self.__dict__[label] = np.array(self.dF[label][label].values)
             
+    def _look_for_x(self):
+        if len(self.setpoint_labels) > 1:
+            print('Warning: more than one setpoints found. I will make a guess which one is x.')
+        for label in self.setpoint_labels:
+            if self.__dict__[label][0] != self.__dict__[label][1]:
+                self.x = self.__dict__[label]
+                self.xlabel = label
+
+    def preview_lines(self, params_to_view):
+        """
+        Plots line cuts of parameters named in params_to_view (list of strings)
+        Returns the fig and axs
+        """
+        self._look_for_x()
+        params = [] # very inefficient by preserves order
+        for pname in params_to_view:
+            params += [p for p in self.params if p.name == pname]
+        param_labels = [f'{p.name} ({p.unit})' for p in params]
+        N = len(params_to_view)
+        fig, axs = plt.subplots(N, 1, figsize=(5,2*N))
+        if N==1:
+            axs = [axs]
+        for kk in range(N):
+            axs[kk].plot(self.x, self.__dict__[params_to_view[kk]])
+            axs[kk].set_ylabel(param_labels[kk])
+        for ax in axs:
+            ax.set_xlabel(self.xlabel)
+        fig.suptitle(self.full_dataset_title, fontsize=10)
+        fig.tight_layout()
+        return fig, axs
 
 
 class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
