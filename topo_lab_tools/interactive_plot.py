@@ -58,7 +58,7 @@ def plot_colormap_interactive(x, y, z, xlabel=None, ylabel=None, zlabel=None, ad
 
 
 # to do: draw and label things better
-def plot_linecut_viewers(fig_2d, ax_2d, mesh_2d, x, y, z, marker_color='white'):
+def plot_linecut_viewers(ax_2d, x, y, z, marker_color='white'):
     """
     Takes the fig, ax, mesh of a heatmap and creates interactive x and y linecut viewers.
     x, y, z need to be supplied and thus are decoupled from actual 2d heatmap data,
