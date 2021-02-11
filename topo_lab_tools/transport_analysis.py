@@ -767,9 +767,9 @@ class Dataset_2d_qcodes(Dataset_qcodes_basic, Dataset_2d):
                 if p.name == param_name:
                     return p
                 
-        y_init, x_init = [self.__dict__[label] for label in self.setpoint_labels]
+        y_init, x_init = [self.__dict__[label] for label in self.setpoint_names]
         self.y_param, self.x_param = [_look_for_param(label) \
-                                      for label in self.setpoint_labels]
+                                      for label in self.setpoint_names]
         if y_init[0] != y_init[1]: # makes sure x is the inner/fast axis and y outer/slow
             y_init, x_init = x_init, y_init
             self.y_param, self.x_param = self.x_param, self.y_param
